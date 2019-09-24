@@ -1,8 +1,9 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 FILE *file;
+char dest[12];
+int errorCheck = 1;
 
 void init();
 void addContact();
@@ -11,6 +12,8 @@ void editContact();
 void delContact();
 
 void delLine(int l);
+int deleteFunc(const char *input);
+char* getPhoneNumber();
 
 int main() {
     init();
@@ -44,7 +47,7 @@ int main() {
 
 void init() {
     if((file = fopen("2018008468_ParkHyeonJun.csv", "r")) == NULL){
-        printf("파일 생성합니다\n");
+        //printf("파일 생성합니다\n");
         FILE *init = fopen("contact2.csv", "r");
         file = fopen("2018008468_ParkHyeonJun.csv", "w");
         char buf[1024];
@@ -54,13 +57,6 @@ void init() {
             fputs(buf, file);
         }
         fclose(init);
-    }
-    //test
-    else{
-        char tmp[200];
-        fscanf(file, "%s", tmp);
-        printf("Name: %s,", strtok(tmp, ","));
-        printf(" Phone: %s\n", strtok(NULL, ","));
     }
     fclose(file);
 }
@@ -75,56 +71,82 @@ void search() {
     scanf("%s", input);
     //int i = 0;
     file = fopen("2018008468_ParkHyeonJun.csv", "r+");
+    int i = 0;
     while (!feof(file)){
         fgets(tmp, 512, file);
-        if(strstr(tmp, input) != NULL)
+        if(strstr(tmp, input) != NULL){
             printf("%s\n", tmp);
-            //result[i++] = tmp;
+            i++;
+        }
     }
     fclose(file);
+    printf("총 %d건 검색됨\n", i);
 }
 
 void addContact() {
-    char name[50], phone[11];
+    char name[50] = "", *phone;
     printf("\n---연락처 삽입---\n");
     while(getchar() != '\n');
     printf("이름: ");
     scanf("%[^\n]", name);
-    if(name == NULL || (strcmp(name, "") == 0)){
-        printf("이름은 공백일 수 없습니다.\n"); //TODO: ╔ Bug!!
+    if(name[0] == '\0'){
+        printf("이름은 공백일 수 없습니다.\n");
         return;
-    } else{
-        printf("%s\n", name);
     }
-
-    while(getchar() != '\n');
     printf("전화번호: ");
-    scanf("%[^\n]", phone);
-    if((strcmp(phone, "") == 0)){
-        printf("전화번호는 공백일 수 없습니다.\n");
-        return;
+    phone = getPhoneNumber();
+
+    if(errorCheck){
+        file = fopen("2018008468_ParkHyeonJun.csv", "r+");
+        fseek(file, 0L, SEEK_END);
+        fprintf(file, "\n%s,%s", name, phone);
+        fclose(file);
+
+        printf("연락처 삽입 완료!\n");
     }
-
-    file = fopen("2018008468_ParkHyeonJun.csv", "r+");
-    fseek(file, 0L, SEEK_END);
-    fprintf(file, "\n%s,%s", name, phone);
-    fclose(file);
-
-    printf("연락처 삽입 완료!\n");
 }
 
 void editContact() {
+    char name[50] = "", *phone;
     printf("\n---연락처 수정---\n");
+
+    while(getchar() != '\n');
+    printf("이름: ");
+    scanf("%[^\n]", name);
+
+    if(name[0] == '\0'){
+        puts("이름은 공백일 수 없습니다.");
+        return;
+    }
+    printf("바꿀 전화번호: ");
+    phone = getPhoneNumber();
+
+    if(errorCheck){
+        deleteFunc(name);
+
+        file = fopen("2018008468_ParkHyeonJun.csv", "r+");
+        fseek(file, 0L, SEEK_END);
+        fprintf(file, "\n%s,%s", name, phone);
+        fclose(file);
+
+        printf("연락처 수정 완료!\n");
+    }
 }
 
 void delContact() {
-    char input[50], buf[512];
-    char* name;
+    char input[50];
     printf("\n---연락처 삭제---\n");
     while(getchar() != '\n');
     printf("이름: ");
     scanf("%[^\n]", input);
 
+    if(deleteFunc(input))
+        printf("연락처 삭제 완료!\n");
+}
+
+int deleteFunc(const char *input) {
+    char buf[512];
+    char* name;
     file = fopen("2018008468_ParkHyeonJun.csv", "r");
     int i =1, j=1;
     while (!feof(file)){
@@ -136,9 +158,14 @@ void delContact() {
         i++;
     }
     fclose(file);
-    if(i == j)
+    if(i == j){
         printf("일치하는 이름을 찾을 수 없습니다\n");
-    else delLine(i);
+        return 0;
+    }
+    else {
+        delLine(i);
+        return 1;
+    }
 }
 
 void delLine(int l){
@@ -169,6 +196,22 @@ void delLine(int l){
     fclose(copy);
     remove("2018008468_ParkHyeonJun.csv");
     rename("copy.csv", "2018008468_ParkHyeonJun.csv");
+}
 
-    printf("연락처 삭제 완료!\n");
+char* getPhoneNumber(){
+    char src[12];
+
+    while(getchar() != '\n');
+    scanf("%s", src);
+
+    if(src[0] == '0' && src[1] == '1' && src[2] == '0' && strlen(src) == 11){
+        sscanf(src, "%[0-9]", dest);
+        if(strcmp(src, dest) == 0){
+            errorCheck = 1;
+            return dest;
+        }
+    }
+    printf("010으로 시작하는 11자리 숫자를 입력해주세요!\n");
+    errorCheck = 0;
+    //return NULL;
 }
